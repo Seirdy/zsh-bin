@@ -238,8 +238,8 @@ cd zsh-zsh-5.8
 
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
-export CPPFLAGS=
-export LDFLAGS=
+export CPPFLAGS="-O2 -DNDEBUG -g -pipe -Wall -grecord-gcc-switches -fasynchronous-unwind-tables -s -Wno-error=unused-parameter -Wno-error=unused-variable -flto -fuse-linker-plugin"
+export LDFLAGS="$CPPFLAGS"
 export LIBS=
 
 case "$ZSH_BIN_KERNEL" in
