@@ -840,7 +840,7 @@ case "$ZSH_BIN_KERNEL" in
       -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
       -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
-      -v "$PWD":/out                      \
+      -v "$PWD":/out:Z                    \
       -w /out                             \
       --tty                               \
       --rm                                \
