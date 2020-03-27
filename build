@@ -22,7 +22,7 @@ usage="$(cat <<\END
 Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
 
 Creates an archive containing statically-linked, hermetic,
-relocatable Zsh 5.8. Installation of Zsh from the archive
+relocatable Zsh. Installation of Zsh from the archive
 does not require libc, terminfo, ncurses or root access.
 As long as the target machine has a compatible CPU and
 kernel, it will work.
@@ -235,10 +235,20 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
 fi
 
 pwd
-git clone git://git.code.sf.net/p/zsh/code zsh-zsh-5.8
-cd zsh-zsh-5.8
+cd "$outdir"
+if [ ! -d "$PWD/zsh" ]; then
+	git clone git://git.code.sf.net/p/zsh/code zsh
+fi
+cd zsh
+git stash
+git pull
+git submodule update --init --recursive --remote
+get_version() {
+	grep '^VERSION=' Config/version.mk | sed 's/VERSION=//'
+}
+version="$(get_version)"
 
-name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
+name=zsh-"$version"-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
 export CPPFLAGS="-O2 -DNDEBUG -g -pipe -Wall -grecord-gcc-switches -fasynchronous-unwind-tables -s -Wno-error=unused-parameter -Wno-error=unused-variable -flto -fuse-linker-plugin"
 export LDFLAGS="$CPPFLAGS"
@@ -281,11 +291,11 @@ export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
   --disable-site-fndir               \
   --disable-site-scriptdir           \
   --enable-cap                       \
-	--enable-unicode9 \
-	--enable-pcre \
+	--enable-unicode9                  \
+	--enable-pcre                      \
   --with-tcsetpgrp                   \
   --disable-dynamic                  \
-	--enable-gdbm \
+	--enable-gdbm                      \
   --host="$ZSH_BIN_ARCH"             \
 
 sed_i() {
@@ -300,6 +310,7 @@ sed_i() {
 }
 
 sed_i 's/link=no/link=static/' config.modules
+sed_i 's|^\.NOTPARALLEL|#.NOTPARALLEL|' Config/defs.mk.in # enable parallel build
 
 case "$ZSH_BIN_KERNEL" in
   linux);;
@@ -334,10 +345,10 @@ sed_i 's/tgetent/tgetent_with_env/g' Src/init.c
 
 cat >>Src/init.c <<-\END
 	volatile char tagged_script_dir[sizeof(SCRIPT_DIR_TAG) + 4096] = {
-	  SCRIPT_DIR_TAG "/usr/share/zsh/5.8/scripts"
+	  SCRIPT_DIR_TAG "/usr/share/zsh/$version/scripts"
 	};
 	volatile char tagged_fpath_dir[sizeof(FPATH_DIR_TAG) + 4096] = {
-	  FPATH_DIR_TAG "/usr/share/zsh/5.8/functions"
+	  FPATH_DIR_TAG "/usr/share/zsh/$version/functions"
 	};
 	volatile char tagged_terminfo_dir[sizeof(TERMINFO_DIR_TAG) + 4096] = {
 	  TERMINFO_DIR_TAG "/usr/share/terminfo"
@@ -403,10 +414,6 @@ else
 fi
 
 strip "$workdir/$name"/bin/zsh
-get_version() {
-	"$workdir/$name"/bin/zsh --version | awk '{print $2}'
-}
-version="$(get_version)"
 export version
 echo "built zsh $version"
 rm -- "$workdir/$name"/bin/zsh-*
