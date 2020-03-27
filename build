@@ -29,13 +29,15 @@ kernel, it will work.
 
 Options:
 
-  -m ARCH   `uname -m` from the target machine; defaults to `uname -m`
-            from the local machine
-  -c CPU    generate machine instructions for CPU of this type; this
-            value gets passed as -march to gcc; inferred from ARCH
-            if not set explicitly
-  -i IMAGE  podman image used for building zsh; inferred from ARCH
-            if not set explicitly
+  -m ARCH      `uname -m` from the target machine; defaults to `uname -m`
+               from the local machine
+  -c CPU       generate machine instructions for CPU of this type; this
+               value gets passed as -march to gcc; inferred from ARCH
+               if not set explicitly
+  -i IMAGE     podman image used for building zsh; inferred from ARCH
+               if not set explicitly
+  -c CHECKOUT  the git commit hash or tag from the zsh git repo to check
+               out and build from; defaults to "zsh-5.8"
 END
 )"
 
@@ -239,7 +241,7 @@ if [ ! -d "$outdir/src/zsh" ]; then
 fi
 cd "$outdir/src/zsh"
 git clean -nx # delete untracked files
-git stash # no changes
+git reset --hard "$ZSH_GIT_CHECKOUT" # no changes
 git fetch
 # git pull
 # git submodule update --init --recursive --remote
@@ -715,6 +717,7 @@ absfile() {
 ZSH_BIN_ARCH=
 ZSH_BIN_CPU=
 ZSH_BIN_IMAGE=
+ZSH_GIT_CHECKOUT=
 
 while getopts ':m:c:i:h' opt "$@"; do
   case "$opt" in
@@ -755,6 +758,17 @@ while getopts ':m:c:i:h' opt "$@"; do
       fi
       ZSH_BIN_IMAGE="$OPTARG"
     ;;
+    c)
+      if [ -n "$ZSH_GIT_CHECKOUT" ]; then
+        >&2 echo "[error] duplicate option: -$opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+        exit 1
+      fi
+      ZSH_GIT_CHECKOUT="$OPTARG"
+    ;;
     \?) >&2 echo "[error] invalid option: -$OPTARG"           ; exit 1;;
     :)  >&2 echo "[error] missing required argument: -$OPTARG"; exit 1;;
     *)  >&2 echo "[internal error] unhandled option: -$opt"   ; exit 1;;
@@ -792,6 +806,10 @@ if [ -z "$ZSH_BIN_CPU" ]; then
 			;;
 		esac
 	fi
+fi
+
+if [ -z "$ZSH_GIT_CHECKOUT" ]; then
+	ZSH_GIT_CHECKOUT="zsh-5.8"
 fi
 
 ZSH_BIN_KERNEL="$(uname -s)"
