@@ -1,0 +1,3 @@
+[submodule "src/zsh"]
+	path = src/zsh
+	url = git://git.code.sf.net/p/zsh/code.git

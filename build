@@ -234,15 +234,15 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   PATH="$fake_bin_dir:$PATH" ./build install macros
 fi
 
-pwd
-cd "$outdir"
-if [ ! -d "$PWD/zsh" ]; then
+if [ ! -d "$outdir/src/zsh" ]; then
 	git clone git://git.code.sf.net/p/zsh/code zsh
 fi
-cd zsh
-git stash
-git pull
-git submodule update --init --recursive --remote
+cd "$outdir/src/zsh"
+git clean -nx # delete untracked files
+git stash # no changes
+git fetch
+# git pull
+# git submodule update --init --recursive --remote
 get_version() {
 	grep '^VERSION=' Config/version.mk | sed 's/VERSION=//'
 }
