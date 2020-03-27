@@ -403,7 +403,6 @@ else
 fi
 
 strip "$workdir/$name"/bin/zsh
-<<<<<<< HEAD
 get_version() {
 	"$workdir/$name"/bin/zsh --version | awk '{print $2}'
 }
@@ -531,7 +530,7 @@ cat >"$workdir/$name/share/zsh/$version/scripts/relocate" <<-\END
 
 	zsh="$src"/bin/zsh
 	get_version() {
-		"$zsh --version | awk '{print $2}'
+		"$zsh" --version | awk '{print $2}'
 	}
 	version="$(get_version)"
 	runhelp="$src/share/zsh/$version/functions/run-help"
