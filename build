@@ -6,7 +6,6 @@
 # for full documentation.
 
 set -ue
-
 if [ -n "${BASH_VERSION:-}" ]; then
   if [ -z "${BASH_VERSION##[0-4].*}" ]; then
     >&2 echo "[error] bash version < 5 is not supported; try another interpreter"
@@ -49,7 +48,7 @@ else
   workdir="${TMPDIR:-/tmp}/zsh-bin.$$"
   mkdir -- "$workdir"
 fi
-
+ 
 cd -- "$workdir"
 workdir="$(pwd)"
 
@@ -235,6 +234,7 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   PATH="$fake_bin_dir:$PATH" ./build install macros
 fi
 
+pwd
 git clone git://git.code.sf.net/p/zsh/code zsh-zsh-5.8
 cd zsh-zsh-5.8
 
@@ -275,15 +275,17 @@ export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
   --prefix="$workdir/$name"          \
   --disable-etcdir                   \
   --disable-zshenv                   \
-  --disable-zshrc                    \
   --disable-zlogin                   \
   --disable-zprofile                 \
   --disable-zlogout                  \
   --disable-site-fndir               \
   --disable-site-scriptdir           \
   --enable-cap                       \
+	--enable-unicode9 \
+	--enable-pcre \
   --with-tcsetpgrp                   \
   --disable-dynamic                  \
+	--enable-gdbm \
   --host="$ZSH_BIN_ARCH"             \
 
 sed_i() {
@@ -302,8 +304,8 @@ sed_i 's/link=no/link=static/' config.modules
 case "$ZSH_BIN_KERNEL" in
   linux);;
   freebsd)
-    sed_i 's/attr.mdd link=static/attr.mdd link=no/' config.modules
-    sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
+    sed_i 's/attr.mdd link=[a-z]*/attr.mdd link=no/' config.modules
+    sed_i 's/db_gdbm.mdd link=[a-z]*/db_gdbm.mdd link=no/' config.modules
   ;;
   darwin)
     sed_i 's/db_gdbm.mdd link=static/db_gdbm.mdd link=no/' config.modules
@@ -401,7 +403,13 @@ else
 fi
 
 strip "$workdir/$name"/bin/zsh
-rm "$workdir/$name"/bin/zsh-5.8
+get_version() {
+	"$workdir/$name"/bin/zsh --version | awk '{print $2}'
+}
+version="$(get_version)"
+export version
+echo "built zsh $version"
+rm "$workdir/$name"/bin/zsh-*
 
 if [ -d /usr/share/terminfo ]; then
   cp -r -- /usr/share/terminfo "$workdir/$name"/share/
@@ -411,16 +419,16 @@ fi
 
 if [ -e "$workdir"/zsh_doc ]; then
   cp -r -- "$workdir"/zsh_doc/share/man "$workdir/$name"/share/
-  cp -r -- "$workdir"/zsh_doc/share/zsh/5.8/help "$workdir/$name"/share/zsh/5.8/
+  cp -r -- "$workdir/zsh_doc/share/zsh/$version/help" "$workdir/$name/share/zsh/$version/"
 fi
 
 sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
 '"$magic"'\
 )"/'                                                 \
-  "$workdir/$name"/share/zsh/5.8/functions/run-help  \
-  "$workdir/$name"/share/zsh/5.8/functions/_run-help
+  "$workdir/$name/share/zsh/$version/functions/run-help"  \
+  "$workdir/$name/share/zsh/$version/functions/_run-help"
 
-cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
+cat >"$workdir/$name/share/zsh/$version/scripts/relocate" <<-\END
 	#!/bin/sh
 
 	set -ue
@@ -521,8 +529,12 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	fi
 
 	zsh="$src"/bin/zsh
-	runhelp="$src"/share/zsh/5.8/functions/run-help
-	runhelpcomp="$src"/share/zsh/5.8/functions/_run-help
+	get_version() {
+		"$zsh --version | awk '{print $2}'
+	}
+	version="$(get_version)"
+	runhelp="$src/share/zsh/$version/functions/run-help"
+	runhelpcomp="$src/share/zsh/$version/functions/_run-help"
 
 	if [ ! -x "$zsh" ]; then
 	  >&2 echo "[error] not an executable file: $zsh"
@@ -541,7 +553,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 
 	dst="${dst%/}/"
 
-	# 4096 minus 23 for "share/zsh/5.8/functions"
+	# 4096 minus 23 for "share/zsh/$version/functions"
 	if [ ${#dst} -gt 4073 ]; then
 	  >&2 echo "[error] directory name too long: $dst"
 	  exit 1
@@ -563,7 +575,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	    >&2 echo "[error] not a relocatable zsh directory: $src"
 	    exit 1
 	  fi
-	  local dir="$dst"share/zsh/5.8/help
+	  local dir="${dst}share/zsh/$version/help"
 	  printf '%s\n%s\n%s\n' "$prefix$magic" "$dir" "$magic$suffix" >"$1".tmp
 	}
 
@@ -595,8 +607,8 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	patch_help "$runhelp"
 	patch_help "$runhelpcomp"
 
-	patch_bin "$fpath_pos"    fpath    share/zsh/5.8/functions
-	patch_bin "$script_pos"   script   share/zsh/5.8/scripts
+	patch_bin "$fpath_pos"    fpath    "share/zsh/$version/functions"
+	patch_bin "$script_pos"   script   "share/zsh/$version/scripts"
 	patch_bin "$terminfo_pos" terminfo share/terminfo
 
 	if ! fpath="$("$zsh".tmp -c 'print -r -- $fpath[1]')" ||
@@ -610,7 +622,7 @@ cat >"$workdir/$name"/share/zsh/5.8/scripts/relocate <<-\END
 	mv -f -- "$runhelpcomp".tmp "$runhelpcomp"
 	END
 
-sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
+sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" "$workdir/$name/share/zsh/$version/scripts/relocate"
 
 embed_pos() {
   local cmd='
@@ -623,18 +635,18 @@ embed_pos() {
   printf '%s' "$pos" | grep -qxE '[0-9]+'
   local upper
   upper="$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')"
-  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "$workdir/$name"/share/zsh/5.8/scripts/relocate
+  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "$workdir/$name/share/zsh/$version/scripts/relocate"
 }
 
 embed_pos fpath
 embed_pos script
 embed_pos terminfo
 
-chmod +x "$workdir/$name"/share/zsh/5.8/scripts/relocate
+chmod +x "$workdir/$name/share/zsh/$version/scripts/relocate"
 
-"$workdir/$name"/share/zsh/5.8/scripts/relocate
+"$workdir/$name/share/zsh/$version/scripts/relocate"
 "$workdir/$name"/bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
-"$workdir/$name"/share/zsh/5.8/scripts/relocate -d /usr
+"$workdir/$name/share/zsh/$version/scripts/relocate" -d /usr
 
 case "$ZSH_BIN_KERNEL" in
   linux)
@@ -659,7 +671,7 @@ cat >&2 <<-END
 	SUCCESS: created ./$name.tar.gz.
 
 	This archive contains statically-linked, hermetic,
-	relocatable Zsh 5.8. Installation of Zsh from the archive
+	relocatable Zsh $version. Installation of Zsh from the archive
 	does not require libc, terminfo, ncurses or root access.
 	As long as the target machine has a compatible CPU and
 	kernel, it will work.
@@ -671,7 +683,7 @@ cat >&2 <<-END
 	  rm -rf ~/.zsh-bin ~/$name
 	  tar -xzf ~/$name.tar.gz
 	  mv $name ~/.zsh-bin
-	  ~/.zsh-bin/share/zsh/5.8/scripts/relocate
+	  ~/.zsh-bin/share/zsh/$version/scripts/relocate
 	  rm ~/$name.tar.gz
 
 	Now you can invoke ~/.zsh-bin/bin/zsh and it will just work.
@@ -679,7 +691,7 @@ cat >&2 <<-END
 	convenience.
 
 	If you move or rename ~/.zsh-bin, you will need to call
-	share/zsh/5.8/scripts/relocate/relocate afterwards. See the
+	share/zsh/$version/scripts/relocate/relocate afterwards. See the
 	last line in the instructions above.
 	END
 END
