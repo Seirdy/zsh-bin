@@ -104,7 +104,7 @@ fetch() {
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    apk update
+    apk update -U
     apk add          \
       autoconf       \
       bash           \
@@ -782,10 +782,10 @@ case "$ZSH_BIN_KERNEL" in
   linux)
     if [ -z "$ZSH_BIN_IMAGE" ]; then
       case "$ZSH_BIN_ARCH" in
-        x86_64)         ZSH_BIN_IMAGE=alpine:3.9.5;;
-        i386|i586|i686) ZSH_BIN_IMAGE=i386/alpine:3.9.5;;
-        armv7l)         ZSH_BIN_IMAGE=arm32v7/alpine:3.9.5;;
-        aarch64)        ZSH_BIN_IMAGE=arm64v8/alpine:3.9.5;;
+        x86_64)         ZSH_BIN_IMAGE=alpine:3.11.5;;
+        i386|i586|i686) ZSH_BIN_IMAGE=i386/alpine:3.11.5;;
+        armv7l)         ZSH_BIN_IMAGE=arm32v7/alpine:3.11.5;;
+        aarch64)        ZSH_BIN_IMAGE=arm64v8/alpine:3.11.5;;
         *)
           >&2 echo '[error] unable to infer podman image'
           >&2 echo 'Please specify explicitly with `-i IMAGE`.'
