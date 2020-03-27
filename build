@@ -19,7 +19,7 @@ fi
 
 
 usage="$(cat <<\END
-Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-r FILE]
+Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
 
 Creates an archive containing statically-linked, hermetic,
 relocatable Zsh 5.8. Installation of Zsh from the archive
@@ -252,9 +252,9 @@ case "$ZSH_BIN_KERNEL" in
   darwin)
     opt=/usr/local/opt
     mkdir -- "$workdir"/lib
-    ln -s "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
-    ln -s "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
-    ln -s "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
+    ln -s -- "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
+    ln -s -- "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
+    ln -s -- "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
     CPPFLAGS="-I$opt/libiconv/include -I$opt/ncurses/include -I$opt/pcre/include"
     LDFLAGS="-L$workdir/lib"
     LIBS="-lpcre"
@@ -403,13 +403,14 @@ else
 fi
 
 strip "$workdir/$name"/bin/zsh
+<<<<<<< HEAD
 get_version() {
 	"$workdir/$name"/bin/zsh --version | awk '{print $2}'
 }
 version="$(get_version)"
 export version
 echo "built zsh $version"
-rm "$workdir/$name"/bin/zsh-*
+rm -- "$workdir/$name"/bin/zsh-*
 
 if [ -d /usr/share/terminfo ]; then
   cp -r -- /usr/share/terminfo "$workdir/$name"/share/
