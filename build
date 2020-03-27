@@ -35,7 +35,7 @@ Options:
   -c CPU    generate machine instructions for CPU of this type; this
             value gets passed as -march to gcc; inferred from ARCH
             if not set explicitly
-  -i IMAGE  docker image used for building zsh; inferred from ARCH
+  -i IMAGE  podman image used for building zsh; inferred from ARCH
             if not set explicitly
 END
 )"
@@ -787,26 +787,26 @@ case "$ZSH_BIN_KERNEL" in
         armv7l)         ZSH_BIN_IMAGE=arm32v7/alpine:3.9.5;;
         aarch64)        ZSH_BIN_IMAGE=arm64v8/alpine:3.9.5;;
         *)
-          >&2 echo '[error] unable to infer docker image'
+          >&2 echo '[error] unable to infer podman image'
           >&2 echo 'Please specify explicitly with `-i IMAGE`.'
           exit 1
         ;;
       esac
     fi
-    if ! command -v docker >/dev/null 2>&1; then
-      >&2 echo '[error] docker not found; please install and retry'
+    if ! command -v podman >/dev/null 2>&1; then
+      >&2 echo '[error] podman not found; please install and retry'
       exit 1
     fi
   ;;
   freebsd)
     if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      >&2 echo '[error] podman image (-i) is not supported on freebsd'
       exit 1
     fi
   ;;
   darwin)
     if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      >&2 echo '[error] podman image (-i) is not supported on freebsd'
       exit 1
     fi
   ;;
@@ -817,7 +817,7 @@ case "$ZSH_BIN_KERNEL" in
     fi
     ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')"
     if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] docker image (-i) is not supported on windows'
+      >&2 echo '[error] podman image (-i) is not supported on windows'
       exit 1
     fi
   ;;
@@ -836,7 +836,7 @@ esac
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    docker run                            \
+    podman run                            \
       -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
       -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
