@@ -753,7 +753,7 @@ if [ -z "$ZSH_BIN_ARCH" ]; then
 fi
 
 if [ -z "$ZSH_BIN_CPU" ]; then
-	if [ -n "$ARCH" ]; then
+	if [ -n "${ARCH+x}" ]; then
 		ZSH_BIN_CPU="$ARCH"
 	elif command -v gcc >/dev/null; then
 		_get_arch() {
