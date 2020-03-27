@@ -18,6 +18,7 @@ if [ -n "${ZSH_VERSION:-}" ]; then
   emulate sh -o err_exit -o no_unset
 fi
 
+
 usage="$(cat <<\END
 Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-r FILE]
 
@@ -752,17 +753,26 @@ if [ -z "$ZSH_BIN_ARCH" ]; then
 fi
 
 if [ -z "$ZSH_BIN_CPU" ]; then
-  case "$ZSH_BIN_ARCH" in
-    armv7l)         ZSH_BIN_CPU=armv7;;
-    aarch64)        ZSH_BIN_CPU=armv8-a;;
-    x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
-    i386|i586|i686) ZSH_BIN_CPU="$ZSH_BIN_ARCH";;
-    *)
-      >&2 echo '[error] unable to infer target CPU architecture'
-      >&2 echo 'Please specify explicitly with `-c CPU`.'
-      exit 1
-    ;;
-  esac
+	if [ -n "$ARCH" ]; then
+		ZSH_BIN_CPU="$ARCH"
+	elif command -v gcc >/dev/null; then
+		_get_arch() {
+			gcc -c -Q -march=native --help=target | grep -E '^(\s*)?-march=' | awk '{print $2}'
+		}
+		ZSH_BIN_CPU="$(_get_arch)"
+	else
+		case "$ZSH_BIN_ARCH" in
+			armv7l)         ZSH_BIN_CPU=armv7;;
+			aarch64)        ZSH_BIN_CPU=armv8-a;;
+			x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
+			i386|i586|i686) ZSH_BIN_CPU="$ZSH_BIN_ARCH";;
+			*)
+				>&2 echo '[error] unable to infer target CPU architecture'
+				>&2 echo 'Please specify explicitly with `-c CPU`.'
+				exit 1
+			;;
+		esac
+	fi
 fi
 
 ZSH_BIN_KERNEL="$(uname -s)"
