@@ -112,6 +112,7 @@ case "$ZSH_BIN_KERNEL" in
       g++            \
       gcc            \
       gdbm-dev       \
+      git            \
       groff          \
       make           \
       man            \
@@ -233,7 +234,7 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   PATH="$fake_bin_dir:$PATH" ./build install macros
 fi
 
-fetch "$zsh_url" "$zsh_sha256"
+git clone git://git.code.sf.net/p/zsh/code zsh-zsh-5.8
 cd zsh-zsh-5.8
 
 name=zsh-5.8-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
@@ -283,7 +284,6 @@ export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
   --with-tcsetpgrp                   \
   --disable-dynamic                  \
   --host="$ZSH_BIN_ARCH"             \
-  --enable-custom-patchlevel=zsh-5.8-0-g77d203f
 
 sed_i() {
   [ $# -gt 1 ]
