@@ -4,12 +4,11 @@
 
 1.  The script builds from the zsh git repo. It can check out any tag/commit you want (defaults to
     zsh-5.8)
-2.  Use `podman` instead of `docker`
-3.  Read the CPU architecture from the `$ARCH` environment variable if it isn't provided via a CLI
+2.  Read the CPU architecture from the `$ARCH` environment variable if it isn't provided via a CLI
     flag. If `$ARCH` is empty/unset but GCC is installed, use GCC to detect the native CPU
     architecture on the host machine.
-4.  Some more `$CFLAGS` for compilation speed and link-time optimization
-5.  Use an updated Alpine image
+3.  Some more `$CFLAGS` for compilation speed and link-time optimization
+4.  Use an updated Alpine image
 
 I'll upstream some of these once I'm confident that this works well.
 
@@ -234,22 +233,36 @@ you are curious.
 
 ## Limitations
 
-The build script doesn't work if `/bin/sh` is bash v4.4 or older. Use a newer version of bash or
-a different interpreter. Try `zsh`, `dash` and `ash`. You might have one of these already installed.
-
-This limitation can be removed but the motivation is rather low for doing this. There is no need
-for the build script to be super portable. The install script and `relocate` are a different matter.
-They must be very portable and they are. They work on older versions of bash just fine.
+Zsh from zsh-bin cannot load user-defined compiled modules. There is no way to guarantee that
+user-defined modules have been linked with the same libc as `zsh`, so it's unsafe to load them.
+This limitation likely cannot be removed.
 
 ---
 
-Not all zsh modules are enabled on all platforms:
+Not all standard zsh modules are enabled on all platforms:
 
 - `zsh/db_gdbm` is enabled only on Linux.
 - `zsh/attr` is disabled on FreeBSD.
 - `zsh/pcre` is disabled on Cygwin.
 
 This can be fixed. Please open an issue or better yet send a PR if you care.
+
+---
+
+Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
+
+This can be changed. An empty `etc` directory could be added to the archive, from which Zsh would
+source `zshenv` and similar files if they exist. Please open an issue or better yet send a PR if you
+care.
+
+---
+
+The build script doesn't work if `/bin/sh` is bash v4.4 or older. Use a newer version of bash or
+a different interpreter. Try `zsh`, `dash` and `ash`. You might have one of these already installed.
+
+This limitation can be removed but the motivation is rather low for doing this. There is no need
+for the build script to be super portable. The install script and `relocate` are a different matter.
+They must be very portable and they are. They work on older versions of bash just fine.
 
 ---
 
@@ -266,14 +279,6 @@ All archives in [releases](https://github.com/romkatv/zsh-bin/releases) are prod
   https://github.com/romkatv/zsh-bin/blob/release/mbuild). This script builds Zsh on remote machines
 over SSH. It's not an officially supported script, so please don't expect it to be stable or well
 documented.
-
----
-
-Zsh from zsh-bin doesn't read global rc files from anywhere. It does read user rc files of course.
-
-This can be changed. An empty `etc` directory could be added to the archive, from which Zsh would
-source `zshenv` and similar files if they exist. Please open an issue or better yet send a PR if you
-care.
 
 ---
 

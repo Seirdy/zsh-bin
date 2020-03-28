@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
+# Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-d CMD]
 #
 # Type `build -h` for help and see https://github.com/romkatv/zsh-bin
 # for full documentation.
@@ -19,7 +19,7 @@ fi
 
 
 usage="$(cat <<\END
-Usage: build [-m ARCH] [-c CPU] [-i IMAGE]
+Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-g REF] [-d CMD]
 
 Creates an archive containing statically-linked, hermetic,
 relocatable Zsh. Installation of Zsh from the archive
@@ -34,11 +34,13 @@ Options:
   -c CPU       generate machine instructions for CPU of this type; this
                value gets passed as -march to gcc; inferred from ARCH
                if not set explicitly
-  -i IMAGE     podman image used for building zsh; inferred from ARCH
-               if not set explicitly
-  -c CHECKOUT  the git commit hash or tag from the zsh git repo to check
+  -i IMAGE     OCI image used for building zsh; inferred from ARCH if
+               not set explicitly
+  -g CHECKOUT  the git commit hash or tag from the zsh git repo to check
                out and build from; defaults to "zsh-5.8"; set to
-							 "latest" to build from latest commit (bleeding edge).
+               "latest" to build from latest commit (bleeding edge).
+  -d CMD       use this command instead of 'docker' (e.g., podman); it
+               must understnad the same command line arguments
 END
 )"
 
@@ -256,14 +258,15 @@ version="$(get_version)"
 
 name=zsh-"$version"-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
-export CPPFLAGS="-O2 -DNDEBUG -g -pipe -Wall -grecord-gcc-switches -fasynchronous-unwind-tables -s -Wno-error=unused-parameter -Wno-error=unused-variable -flto -fuse-linker-plugin"
-export LDFLAGS="$CPPFLAGS"
+export CFLAGS="-O2 -DNDEBUG -g -pipe -Wall -Wmissing-prototypes -march=$ZSH_BIN_CPU -grecord-gcc-switches -fasynchronous-unwind-tables -s -Wno-error=unused-parameter -Wno-error=unused-variable -flto -fuse-linker-plugin -fno-strict-aliasing"
+export LDFLAGS="$CFLAGS" CPPFLAGS="$CFLAGS"
+export EXELDFLAGS=
 export LIBS=
 
 case "$ZSH_BIN_KERNEL" in
   linux|freebsd|msys*|mingw*)
-    LDFLAGS="-static"
-    LIBS="-lpcre"
+    EXELDFLAGS="$EXELDFLAGS -static"
+    LIBS="$LIBS -lpcre"
   ;;
   darwin)
     opt=/usr/local/opt
@@ -271,12 +274,12 @@ case "$ZSH_BIN_KERNEL" in
     ln -s -- "$opt"/libiconv/lib/libiconv.a   "$workdir"/lib
     ln -s -- "$opt"/ncurses/lib/libncursesw.a "$workdir"/lib
     ln -s -- "$opt"/pcre/lib/libpcre.a        "$workdir"/lib
-    CPPFLAGS="-I$opt/libiconv/include -I$opt/ncurses/include -I$opt/pcre/include"
-    LDFLAGS="-L$workdir/lib"
-    LIBS="-lpcre"
+    CFLAGS="$CFLAGS -I$opt/libiconv/include -I$opt/ncurses/include -I$opt/pcre/include"
+    LDFLAGS="$LDFLAGS -L$workdir/lib"
+    LIBS="$LIBS -lpcre"
   ;;
   cygwin*)
-    LDFLAGS="-static"
+    EXELDFLAGS="$EXELDFLAGS -static"
   ;;
   *)
     >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
@@ -284,7 +287,8 @@ case "$ZSH_BIN_KERNEL" in
   ;;
 esac
 
-export CFLAGS="$CPPFLAGS -march=$ZSH_BIN_CPU"
+export DLLDFLAGS="-shared"
+export LDFLAGS="$CFLAGS $LDFLAGS"
 
 ./Util/preconfig
 ./configure                          \
@@ -718,12 +722,14 @@ absfile() {
   ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
 }
 
+image=
+docker=
+
 ZSH_BIN_ARCH=
 ZSH_BIN_CPU=
-ZSH_BIN_IMAGE=
 ZSH_GIT_CHECKOUT=
 
-while getopts ':m:c:i:h' opt "$@"; do
+while getopts ':m:c:i:d:g:h' opt "$@"; do
   case "$opt" in
     h)
       printf '%s\n' "$usage"
@@ -752,7 +758,7 @@ while getopts ':m:c:i:h' opt "$@"; do
       ZSH_BIN_CPU="$OPTARG"
     ;;
     i)
-      if [ -n "$ZSH_BIN_IMAGE" ]; then
+      if [ -n "$image" ]; then
         >&2 echo "[error] duplicate option: -$opt"
         exit 1
       fi
@@ -760,9 +766,20 @@ while getopts ':m:c:i:h' opt "$@"; do
         >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
-      ZSH_BIN_IMAGE="$OPTARG"
+      image="$OPTARG"
     ;;
-    c)
+    d)
+      if [ -n "$docker" ]; then
+        >&2 echo "[error] duplicate option: -$opt"
+        exit 1
+      fi
+      if [ -z "$OPTARG" ]; then
+        >&2 echo "[error] incorrect value of -$opt: $OPTARG"
+        exit 1
+      fi
+      docker="$OPTARG"
+    ;;
+    g)
       if [ -n "$ZSH_GIT_CHECKOUT" ]; then
         >&2 echo "[error] duplicate option: -$opt"
         exit 1
@@ -821,7 +838,7 @@ ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | tr '[A-Z]' '[a-z]')"
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    if [ -z "$ZSH_BIN_IMAGE" ]; then
+    if [ -z "$image" ]; then
       case "$ZSH_BIN_ARCH" in
         x86_64)         ZSH_BIN_IMAGE=alpine:3.11.5;;
         i386|i586|i686) ZSH_BIN_IMAGE=i386/alpine:3.11.5;;
@@ -834,20 +851,36 @@ case "$ZSH_BIN_KERNEL" in
         ;;
       esac
     fi
-    if ! command -v podman >/dev/null 2>&1; then
-      >&2 echo '[error] podman not found; please install and retry'
-      exit 1
+    : "${docker:=docker}"
+    if [ -z "${docker##*/*}" ]; then
+      if [ ! -x "$docker" ]; then
+        >&2 echo "[error] not an executable file: $docker"
+        exit 1
+      fi
+    else
+      if ! command -v "$docker" >/dev/null 2>&1; then
+        >&2 echo "[error] command not found: $docker"
+        exit 1
+      fi
     fi
   ;;
   freebsd)
-    if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] podman image (-i) is not supported on freebsd'
+    if [ -n "$image" ]; then
+      >&2 echo '[error] docker image (-i) is not supported on freebsd'
+      exit 1
+    fi
+    if [ -n "$docker" ]; then
+      >&2 echo '[error] docker (-d) is not supported on freebsd'
       exit 1
     fi
   ;;
   darwin)
-    if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] podman image (-i) is not supported on freebsd'
+    if [ -n "$image" ]; then
+      >&2 echo '[error] docker image (-i) is not supported on macOS'
+      exit 1
+    fi
+    if [ -n "$docker" ]; then
+      >&2 echo '[error] docker (-d) is not supported on macOS'
       exit 1
     fi
   ;;
@@ -857,8 +890,12 @@ case "$ZSH_BIN_KERNEL" in
       exit 1
     fi
     ZSH_BIN_KERNEL="$(printf '%s' "$ZSH_BIN_KERNEL" | sed 's/^\([^-]*-[0-9]*\.[0-9]*\).*/\1/')"
-    if [ -n "$ZSH_BIN_IMAGE" ]; then
-      >&2 echo '[error] podman image (-i) is not supported on windows'
+    if [ -n "$image" ]; then
+      >&2 echo '[error] docker image (-i) is not supported on windows'
+      exit 1
+    fi
+    if [ -n "$docker" ]; then
+      >&2 echo '[error] docker (-d) is not supported on windows'
       exit 1
     fi
   ;;
@@ -870,7 +907,8 @@ esac
 
 >&2 echo "Building zsh..."
 >&2 echo ""
-[ -z "$ZSH_BIN_IMAGE" ] || >&2 echo "  IMAGE=$ZSH_BIN_IMAGE"
+[ -z "$docker" ] || >&2 echo "  DOCKER=$docker"
+[ -z "$image"  ] || >&2 echo "  IMAGE=$image"
 >&2 echo "  KERNEL=$ZSH_BIN_KERNEL"
 >&2 echo "  ARCH=$ZSH_BIN_ARCH"
 >&2 echo "  CPU=$ZSH_BIN_CPU"
@@ -887,6 +925,14 @@ case "$ZSH_BIN_KERNEL" in
       --tty                                   \
       --rm                                    \
       -- "$ZSH_BIN_IMAGE" /bin/sh -uexc "$build"
+    "$docker" run                         \
+      -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
+      -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
+      -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
+      -v "$PWD":/out:Z                    \
+      -w /out                             \
+      --rm                                \
+      -- "$image" /bin/sh -uexc "$build"
   ;;
   freebsd|darwin|msys*|mingw*|cygwin*)
     eval "$build"
