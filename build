@@ -37,7 +37,8 @@ Options:
   -i IMAGE     podman image used for building zsh; inferred from ARCH
                if not set explicitly
   -c CHECKOUT  the git commit hash or tag from the zsh git repo to check
-               out and build from; defaults to "zsh-5.8"
+               out and build from; defaults to "zsh-5.8"; set to
+							 "latest" to build from latest commit (bleeding edge).
 END
 )"
 
@@ -241,8 +242,13 @@ if [ ! -d "$outdir/src/zsh" ]; then
 fi
 cd "$outdir/src/zsh"
 git clean -nx # delete untracked files
-git fetch
-git reset --hard "$ZSH_GIT_CHECKOUT" # no changes
+if [ "$ZSH_GIT_CHECKOUT" != 'latest' ]; then
+	git fetch
+	git reset --hard "$ZSH_GIT_CHECKOUT" # no changes
+else
+	git reset --hard HEAD
+	git pull
+fi
 get_version() {
 	grep '^VERSION=' Config/version.mk | sed 's/VERSION=//'
 }
