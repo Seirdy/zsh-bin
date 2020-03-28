@@ -258,7 +258,7 @@ version="$(get_version)"
 
 name=zsh-"$version"-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
-export CFLAGS="-O2 -DNDEBUG -g -pipe -Wall -Wmissing-prototypes -march=$ZSH_BIN_CPU -grecord-gcc-switches -fasynchronous-unwind-tables -s -Wno-error=unused-parameter -Wno-error=unused-variable -flto -fuse-linker-plugin -fno-strict-aliasing"
+export CFLAGS="-Wall -Wmissing-prototypes -march=$ZSH_BIN_CPU -DNDEBUG -O2 -flto -fno-strict-aliasing -g -pipe -grecord-gcc-switches -fasynchronous-unwind-tables -s"
 export LDFLAGS="$CFLAGS" CPPFLAGS="$CFLAGS"
 export EXELDFLAGS=
 export LIBS=
