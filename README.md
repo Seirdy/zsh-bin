@@ -1,4 +1,18 @@
-# zsh-bin
+# zsh-bin (fork)
+
+## Differences from [romkatv's original](https://github.com/romkatv/zsh-bin)
+
+1.  The script builds from the zsh git repo. It can check out any tag/commit you want (defaults to
+    zsh-5.8)
+2.  Use `podman` instead of `docker`
+3.  Read the CPU architecture from the `$ARCH` environment variable if it isn't provided via a CLI
+    flag. If `$ARCH` is empty/unset but GCC is installed, use GCC to detect the native CPU
+    architecture on the host machine.
+4.  Some more `$CFLAGS` for compilation speed and link-time optimization
+5.  Use an updated Alpine image
+
+I'll upstream some of these once I'm confident that this works well.
+
 
 > Statically-linked, hermetic, relocatable Zsh.
 
