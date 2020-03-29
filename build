@@ -243,14 +243,16 @@ if [ ! -d "$outdir/src/zsh" ]; then
 	git clone git://git.code.sf.net/p/zsh/code zsh
 fi
 cd "$outdir/src/zsh"
-git clean -nx # delete untracked files
+git clean -fx         # delete untracked files
+git reset --hard HEAD # revert local changes
+git checkout master   # in case we're on a different branch
 if [ "$ZSH_GIT_CHECKOUT" != 'latest' ]; then
 	git fetch
-	git reset --hard "$ZSH_GIT_CHECKOUT" # no changes
+	git reset --hard "$ZSH_GIT_CHECKOUT"
 else
-	git reset --hard HEAD
 	git pull
 fi
+# get the zsh version string to make this script version-neutral
 get_version() {
 	grep '^VERSION=' Config/version.mk | sed 's/VERSION=//'
 }
@@ -423,7 +425,7 @@ else
   make -j "$cpus" install
 fi
 
-strip "$workdir/$name"/bin/zsh
+# strip "$workdir/$name"/bin/zsh # unnecessary since we have "-s" in CFLAGS
 export version
 echo "built zsh $version"
 rm -- "$workdir/$name"/bin/zsh-*
@@ -546,6 +548,7 @@ cat >"$workdir/$name/share/zsh/$version/scripts/relocate" <<-\END
 	fi
 
 	zsh="$src"/bin/zsh
+	# get the 
 	get_version() {
 		"$zsh" --version | awk '{print $2}'
 	}
