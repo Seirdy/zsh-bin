@@ -843,10 +843,10 @@ case "$ZSH_BIN_KERNEL" in
   linux)
     if [ -z "$image" ]; then
       case "$ZSH_BIN_ARCH" in
-        x86_64)         ZSH_BIN_IMAGE=alpine:3.11.5;;
-        i386|i586|i686) ZSH_BIN_IMAGE=i386/alpine:3.11.5;;
-        armv7l)         ZSH_BIN_IMAGE=arm32v7/alpine:3.11.5;;
-        aarch64)        ZSH_BIN_IMAGE=arm64v8/alpine:3.11.5;;
+        x86_64)         image=alpine:3.11.5;;
+        i386|i586|i686) image=i386/alpine:3.11.5;;
+        armv7l)         image=arm32v7/alpine:3.11.5;;
+        aarch64)        image=arm64v8/alpine:3.11.5;;
         *)
           >&2 echo '[error] unable to infer podman image'
           >&2 echo 'Please specify explicitly with `-i IMAGE`.'
@@ -918,23 +918,14 @@ esac
 
 case "$ZSH_BIN_KERNEL" in
   linux)
-    podman run                                \
+    "$docker" run                             \
       -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL"     \
       -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"         \
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"           \
-      -e ZSH_GIT_CHECKOUT="$ZSH_GIT_CHECKOUT" \
+			-e ZSH_GIT_CHECKOUT="$ZSH_GIT_CHECKOUT" \
       -v "$PWD":/out:Z                        \
       -w /out                                 \
-      --tty                                   \
       --rm                                    \
-      -- "$ZSH_BIN_IMAGE" /bin/sh -uexc "$build"
-    "$docker" run                         \
-      -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL" \
-      -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"     \
-      -e ZSH_BIN_CPU="$ZSH_BIN_CPU"       \
-      -v "$PWD":/out:Z                    \
-      -w /out                             \
-      --rm                                \
       -- "$image" /bin/sh -uexc "$build"
   ;;
   freebsd|darwin|msys*|mingw*|cygwin*)
