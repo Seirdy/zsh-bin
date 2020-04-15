@@ -1,0 +1,9 @@
+/archives
+/locks
+/logs
+.lock
+help-dummy.o
+*.log
+.gitignore
+zsh-*-linux-*.tar.gz
+out/

@@ -1,27 +1,7 @@
 #!/bin/sh
 #
-# Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
-#
-# Download statically-linked, hermetic, relocatable Zsh 5.8 from
-# https://github.com/romkatv/zsh-bin/releases and install it to DIR.
-#
-# Options:
-#
-#   -d DIR  Install to this directory. Defaults to ~/.zsh-bin.
-#
-#   -q      Produce no output on success.
-#
-#   -a ALGO Abort installation if integrity of the downloaded package cannot
-#           be verified with the specified algorithm. ALGO can be "sha256" or
-#           "md5". Cannot be combined with '-f' and '-u'. If '-a' is specified
-#           more than once, at least one algorithm must succeed or
-#           installation is be aborted.
-#
-#   -f FILE Install from a local file. FILE must point to *.tar.gz produced by
-#           the build script.
-#
-#   -u URL  Download the archive from the specified location and install as
-#           usual. Must point to *.tar.gz produced by the build script.
+# Type `install -h` for usage and see https://github.com/romkatv/zsh-bin
+# for documentation.
 
 {
 
@@ -31,57 +11,88 @@ if [ -n "${ZSH_VERSION:-}" ]; then
   emulate sh -o err_exit -o no_unset
 fi
 
-readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v3.0.1
+readonly url_base=https://github.com/romkatv/zsh-bin/releases/download/v4.0.0
 
 readonly archives='
-file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz;   md5:3f8bdf8c53d90b2113e7c588bcd24737; sha256:a7236a12b2351cf0461b6e7d46ea50a4dc51be89ea895daea9fd5c80f5178127;
-file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:4f23789b8545667e81fd325e66417469; sha256:f586cb71155b500b2d956b8699482b2d98e7b8df0828fe930384dd4ec7e25159;
-file:zsh-5.8-darwin-x86_64.tar.gz;         md5:7512ce659a89c8ad4364cfcd23f58171; sha256:f746da5983c28765b3bd590d505968bb7acb2682412bdca0cce709fd87958336;
-file:zsh-5.8-freebsd-amd64.tar.gz;         md5:caa8c128228191a0a87f5009bcdeb45c; sha256:ed95b7b97fa84dba3eef94df6876b545c6301d5b14c9bf3c78b011a87d0bb29e;
-file:zsh-5.8-linux-aarch64.tar.gz;         md5:0338240a28505b6b03fcb6c2a11023fd; sha256:3dd9e777b7d6df2c65b7a5864c74871e65c123e673531801e6b4152bae484f88;
-file:zsh-5.8-linux-armv7l.tar.gz;          md5:5799285a600acc192375a1a76483c7a3; sha256:4fd7f5178478d6e70766113f141fa0288cd9eee84c952c6cdeda00e4545a27da;
-file:zsh-5.8-linux-i386.tar.gz;            md5:eaff316a70279d11ea41465c2a45de09; sha256:f35237b844e83d4517020e6119456597fda323ec103da08b9ea73ad619ca7314;
-file:zsh-5.8-linux-i586.tar.gz;            md5:9d9cd6c133a5b3ac9c01d058fcc03749; sha256:ad1011e4af5b4407abb3fb4819b276a94ddd5a48a75147bfd4172545c5c9236e;
-file:zsh-5.8-linux-i686.tar.gz;            md5:c9572f927d1c4238a3b88b2c55bd403c; sha256:de4440a6ff88ee0004b67707274fb36d26bf67489cc94781cdd7791addca8440;
-file:zsh-5.8-linux-x86_64.tar.gz;          md5:093a5caa31db9a383c7b5bfd3a3ed353; sha256:8bc7e531dd88b1cd2e2e879840d0e73866ff90ade84c556a420231eda380208a;
-file:zsh-5.8-msys_nt-10.0-i686.tar.gz;     md5:16f6b3aefbcdada9edd4711402948302; sha256:e1a5b72dedfe5ad749b96b59ec6a52c32540a37d9183de11c84e747ce10911ab;
-file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:635716bc7be6560a567a7836319ca629; sha256:d9df06aeada673489001c45b39186056730f2321f0087598d3d27b5e000dcc14;'
+file:zsh-5.8-cygwin_nt-10.0-i686.tar.gz;   md5:982f10d5009f4737cdf16cf5f2d029ec; sha256:8e3d51c2460f96c8570cc086189cdafb05a7acf72da04da4b562edc93715a77b;
+file:zsh-5.8-cygwin_nt-10.0-x86_64.tar.gz; md5:a83d9fe7f1954569af09d934ff4223b3; sha256:dc7088d98393c37101b037879f0b71fcc2f3a5c72ff65f149b99bdfbdec257ca;
+file:zsh-5.8-darwin-x86_64.tar.gz;         md5:cb70a7e36f94bd5205bba952b8abf2bf; sha256:b0cec1e2a80570cd304c5743d0cb5f311ad2d31613cd6e07fd219b78e6f6adb3;
+file:zsh-5.8-freebsd-amd64.tar.gz;         md5:04d6b5bd0b3cb723c003eb4c7aea51d8; sha256:e377d8067ae9e15abeb9250ad323509aac78d57f13b06efcc5ecf8a8c242d5c0;
+file:zsh-5.8-linux-aarch64.tar.gz;         md5:a10c08d39160e57172d3187ac65be37d; sha256:4481eedd6b6637238dd3a7ce68ce0f150cc2c2ed8a6d7cdd2b881ad7173de943;
+file:zsh-5.8-linux-armv6l.tar.gz;          md5:ab4577ed10c70a3bafc4143ec342c1bf; sha256:a60dbef025df5f382ceeeae15d5a2cd47b9776c231dab0b37602eaa444926251;
+file:zsh-5.8-linux-armv7l.tar.gz;          md5:fcae87d476fa8b67258a35dfd1efa9dd; sha256:43cce310f4b7a0c1c3560ddc9cf93e949bb9d4959d1bf923274c6385a7e18e0f;
+file:zsh-5.8-linux-i386.tar.gz;            md5:1ed32088cb792fd291d1d31c01d55f7c; sha256:fe36e8db068b5df7bef14e4a790c501c185e4db1abf8dc9410ee8a16a9d85bae;
+file:zsh-5.8-linux-i586.tar.gz;            md5:ad54dba9ec8130dd060c899251e38832; sha256:7dd0930bfa0f1f526eb4e9a8dae54599bc2972f345ad11e627207bff0b48d084;
+file:zsh-5.8-linux-i686.tar.gz;            md5:0c384d00fc12dce7d0cc20f4ae967342; sha256:f19680ac12271391fb7e2e7744cb418315deeffd65b7571f0e862cee0cc4143d;
+file:zsh-5.8-linux-x86_64.tar.gz;          md5:43c83be3b171782d2ba2505db521f1b7; sha256:925ffdcbdca84ae350c3140e39469c6000459d0aa75cd4df17e6ad4dd9324e94;
+file:zsh-5.8-msys_nt-10.0-i686.tar.gz;     md5:0f950e381e382409c5e8ba30b52e8d14; sha256:1d10723ee5cc2678bd56c671959c3d1ca99bf97375a9cb95643700df68dce387;
+file:zsh-5.8-msys_nt-10.0-x86_64.tar.gz;   md5:dfd96a7ec06f0b3c8c23cf459d07f529; sha256:8b66d85c6db2f127279f296a3a6c0ef707b34718e031aa26aed3ed6dfa05ccd2;'
 
-usage="$(cat <<\END
-Usage: install [-d DIR] [-q] [[-a ALGO]...]|[-f FILE]|[-u URL]
+readonly lf="
+"
 
-Download statically-linked, hermetic, relocatable Zsh 5.8 from
-https://github.com/romkatv/zsh-bin/releases and install it to DIR.
+usage="$(cat <<END
+Usage: install [OPTIONS] [-t FILE] [-a <sha256|md5>]...
+               [OPTIONS] -f FILE
+               [OPTIONS] -u URL
+
+If '-f FILE' is specified, install Zsh from the specified *.tar.gz
+file produced by the build script.
+
+If '-u URL' is specified, download the file and install as if with
+'-f FILE'.
+
+If neither '-f' nor '-u' is specified, download the appopriate file
+from https://github.com/romkatv/zsh-bin/releases and install as if
+with '-t FILE'. If '-a <sha256|md5>' is specified at least once,
+abort installation if integrity of the downloaded package cannot
+be verified with at least one of the listed hashing algorithms.
 
 Options:
 
-  -d DIR  Install to this directory. Defaults to ~/.zsh-bin.
+  -q
 
-  -q      Produce no output on success.
+    Produce no output on success.
 
-  -a ALGO Abort installation if integrity of the downloaded package cannot
-          be verified with the specified algorithm. ALGO can be "sha256" or
-          "md5". Cannot be combined with '-f' and '-u'. If '-a' is specified
-          more than once, at least one algorithm must succeed or
-          installation is be aborted.
+  -d DIR
 
-  -f FILE Install from a local file. FILE must point to *.tar.gz produced by
-          the build script.
+    Install to this directory. If specified more than once, present
+    an interactive dialog to choose the directory. Empty argument
+    means a custom directory (requires manual user input). If '-d'
+    is not specified, the effect is dential to this:
 
-  -u URL  Download the archive from the specified location and install as
-          usual. Must point to *.tar.gz produced by the build script.
+      -d /usr/local -d ~/.local -d ""
 END
 )"
 
 absfile() {
-  [ -e "$1" ]
+  if [ ! -e "$1" ]; then
+    >&2 echo "[error] file not found: $1"
+    return 1
+  fi
   local dir base
   dir="$(dirname -- "$1")"
   base="$(basename -- "$1")"
   ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
 }
 
-dir=
+check_dir() {
+  if [ -z "$1" ]; then
+    >&2 echo "[error] directory cannot be empty string"
+    exit 1
+  fi
+  if [ -z "${1##~*}" ]; then
+    >&2 echo "[error] please expand '~' in directory name: $1"
+    exit 1
+  fi
+  if [ -z "${1##//*}" ]; then
+    >&2 echo "[error] directory cannot start with '//': $1"
+    exit 1
+  fi
+}
+
+dirs=
+num_dirs=0
 quiet=
 algos=
 url=
@@ -101,15 +112,23 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
       quiet=1
     ;;
     d)
-      if [ -n "$dir" ]; then
-        >&2 echo "[error] duplicate option: -$opt"
+      if printf "%s" "$dirs" | cut -b 7- | grep -qxF -- "$OPTARG"; then
+        >&2 echo "[error] duplicate option: -$opt $OPTARG"
         exit 1
       fi
-      if [ -z "$OPTARG" ]; then
+      if [ "$(printf "%s" "$OPTARG" | wc -l)" != 0 ]; then
         >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
-      dir="$OPTARG"
+      if [ "$num_dirs" = 9 ]; then
+        >&2 echo "[error] too many options: -$opt"
+        exit 1
+      fi
+      if [ -n "$OPTARG" ]; then
+        check_dir "$OPTARG"
+      fi
+      num_dirs=$((num_dirs + 1))
+      dirs="$dirs  ($num_dirs) ${OPTARG}${lf}"
     ;;
     a)
       case "$OPTARG" in
@@ -135,10 +154,7 @@ while getopts ':hqd:a:f:u:' opt "$@"; do
         >&2 echo "[error] incorrect value of -$opt: $OPTARG"
         exit 1
       fi
-      if ! file="$(absfile "$OPTARG")"; then
-        >&2 echo "[error] file not found: $OPTARG"
-        exit 1
-      fi
+      file="$(absfile "$OPTARG")"
     ;;
     u)
       if [ -n "$url" ]; then
@@ -173,42 +189,79 @@ if [ -n "$algos" ]; then
   fi
 fi
 
-if [ -n "$dir" ]; then
-  if [ -n "${dir##/*}" ]; then
-    >&2 echo "[error] path not absolute: $dir"
-    exit 1
-  fi
+if [ -z "$dirs" ]; then
+  for dir in /usr/local ~/.local ""; do
+    num_dirs=$((num_dirs + 1))
+    dirs="$dirs  ($num_dirs) ${dir}${lf}"
+  done
+fi
+
+if [ "$num_dirs" = 1 ]; then
+  choice=1
 else
-  home="${HOME:-x}"
-  if [ "$home" = x -o -n "${home##/*}" ]; then
-    >&2 echo "[error] invalid HOME: $home"
-    exit 1
-  fi
-  dir="$home"/.zsh-bin
+  while true; do
+    echo "Choose installation directory for Zsh 5.8:"
+    echo ""
+    printf "%s" "$dirs" | sed -E 's/^(  \([0-9]*\) )$/\1Custom directory (input required)/'
+    echo ""
+    printf "Choice: "
+    read -r choice
+    if printf "%s" "$dirs" | cut -b 4 | grep -qxF -- "$choice"; then
+      break
+    fi
+    >&2 echo "[error] invalid choice: $choice"
+    echo
+  done
 fi
 
-if [ -e "$dir" ]; then
-  if [ ! -d "$dir" ]; then
-    >&2 echo "[error] not a directory: $dir"
-    exit 1
+dir="$(printf "%s" "$dirs" | sed "${choice}!d" | cut -b 7-)"
+if [ -z "$dir" ]; then
+  printf "Custom directory: "
+  read -r dir
+  check_dir "$dir"
+  if [ -z "$quiet" ]; then
+    echo
   fi
-  files="$(ls -A -- "$dir")"
-  if [ -n "$files" ]; then
-    >&2 echo "[error] directory exists and not empty: $dir"
-    exit 1
-  fi
+elif [ -z "$quiet" -a "$num_dirs" != 1 ]; then
+  echo
 fi
 
-tmpdir="$dir".tmp.$$
-cleanup() {
-  cd /
-  rm -rf -- "$tmpdir"
-}
-trap cleanup INT QUIT TERM EXIT ILL PIPE
+if [ -z "$quiet" ]; then
+  echo "Installing Zsh 5.8 to $dir"
+fi
 
-rm -rf -- "$tmpdir"
-mkdir -- "$tmpdir"
-cd -- "$tmpdir"
+sudo=
+command -v sudo >/dev/null 2>&1 && euid="$(id -u 2>/dev/null)" || euid=0
+
+parent="$dir"
+while true; do
+  if [ -e "$parent" ]; then
+    if [ ! -d "$parent" ]; then
+      >&2 echo "[error] not a directory: $parent"
+      exit 1
+    fi
+    if [ ! -w "$parent" ]; then
+      if [ "$euid" = 0 ]; then
+        >&2 echo "[error] directory not writable: $parent"
+        exit 1
+      else
+        if [ -z "$quiet" ]; then
+          echo "Will use 'sudo' because directory is not writable: $parent"
+        fi
+        sudo=sudo
+      fi
+    fi
+    break
+  fi
+  if [ "$parent" = / -o "$parent" = . ]; then
+    break
+  fi
+  parent="$(dirname -- "$parent")"
+done
+
+$sudo mkdir -p -- "$dir"
+cd -- "$dir"
+dir="$(pwd)"
 
 if [ -z "$file" -a -z "$url" ]; then
   kernel="$(uname -s | tr '[A-Z]' '[a-z]')"
@@ -229,8 +282,8 @@ if [ -z "$file" -a -z "$url" ]; then
 
   if [ -n "${archives##*file:${url##*/};*}" ]; then
     >&2 echo "[error] there is no prebuilt binary for your architecture"
-    >&2 echo "See https://github.com/romkatv/zsh-bin#compiling if you'd"
-    >&2 echo "like to build it yourself."
+    >&2 echo
+    >&2 echo "See https://github.com/romkatv/zsh-bin#compiling to build one."
     exit 1
   fi
 
@@ -240,20 +293,27 @@ else
 fi
 
 if [ -n "$url" ]; then
+  file="${TMPDIR:-/tmp}"/zsh-bin.tmp.$$.tar.gz
+  cleanup() { rm -f -- "$file"; }
+  trap cleanup INT QUIT TERM EXIT ILL PIPE
+
   if [ -z "$quiet" ]; then
     echo "Downloading $url"
   fi
 
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSLO -- "$url"
+    curl -fsSLo "$file" -- "$url"
   elif command -v wget >/dev/null 2>&1; then
-    wget ${quiet:+--quiet} -- "$url"
+    if ! err="$(wget -O "$file" -- "$url" 2>&1)"; then
+      >&2 printf "%s" "$err"
+      exit 1
+    fi
   else
     >&2 echo "[error] please install curl or wget and retry"
     exit 1
   fi
-
-  file="$tmpdir/${url##*/}"
+else
+  cleanup() { true; }
 fi
 
 if [ "$check_sig" = 1 ]; then
@@ -301,7 +361,7 @@ if [ "$check_sig" = 1 ]; then
         >&2 echo ""
         >&2 echo "Expected:"
         >&2 echo ""
-        >&2 echo "  $(printf "%s" "$archives" | grep -F "${file##*/}" | sed 's/  */ /g')"
+        >&2 echo "  $(printf "%s" "$archives" | grep -F -- "${url##*/}" | sed 's/  */ /g')"
         >&2 echo ""
         >&2 echo "Found:"
         >&2 echo ""
@@ -309,12 +369,12 @@ if [ "$check_sig" = 1 ]; then
         exit 1
       fi
       if [ -z "$quiet" ]; then
-        echo "$algo signature matches"
+        echo "  - $algo signature matches"
       fi
       algos="${algos##*<$algo>*}"
     else
       if [ -z "$quiet" ]; then
-        echo "No local tools available to verify $algo signature"
+        echo "  - no local tools available to verify $algo signature"
       fi
     fi
   done
@@ -329,17 +389,8 @@ if [ -z "$quiet" ]; then
   echo "Extracting files"
 fi
 
-tar -xzf "$file"
-base="$(basename -- "${file%.tar.gz}")"
-"$base"/share/zsh/5.8/scripts/relocate -d "$dir"
-
-if [ -z "$quiet" ]; then
-  echo "Moving files to $dir"
-fi
-
-mkdir -p -- "$dir"
-rmdir -- "$dir"
-mv -- "$tmpdir"/"$base" "$dir"
+$sudo tar -xzf "$file"
+$sudo ./share/zsh/5.8/scripts/relocate
 
 cleanup
 
@@ -347,11 +398,13 @@ if [ -z "$quiet" ]; then
   echo ""
   echo "Zsh 5.8 successfully installed to $dir"
   echo ""
-  echo "To start zsh, type:"
+  echo "To start Zsh, type:"
   echo ""
-  echo "  $dir/bin/zsh"
-  echo ""
-  echo "Consider adding $dir/bin to PATH for convenience."
+  if ! zsh="$(command -v zsh 2>/dev/null)" || [ "$zsh" != "$dir/bin/zsh" ]; then
+    echo '  export PATH="'$dir'/bin:$PATH"'
+  fi
+  echo "  zsh"
+  echo
 fi
 
 }

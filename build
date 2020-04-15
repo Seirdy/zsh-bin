@@ -1,9 +1,7 @@
 #!/bin/sh
 #
-# Usage: build [-m ARCH] [-c CPU] [-i IMAGE] [-d CMD]
-#
-# Type `build -h` for help and see https://github.com/romkatv/zsh-bin
-# for full documentation.
+# Type `build -h` for usage and see https://github.com/romkatv/zsh-bin
+# for documentation.
 
 set -ue
 if [ -n "${BASH_VERSION:-}" ]; then
@@ -47,6 +45,7 @@ END
 build="$(cat <<\END
 outdir="$(pwd)"
 
+
 if command -v mktemp >/dev/null 2>&1; then
   workdir="$(mktemp -d "${TMPDIR:-/tmp}"/zsh-bin.XXXXXXXXXX)"
 else
@@ -67,6 +66,7 @@ fi
 cleanup() {
   cd /
   rm -rf -- "$workdir"
+  trap - INT QUIT TERM EXIT ILL PIPE
 }
 trap cleanup INT QUIT TERM EXIT ILL PIPE
 
@@ -78,13 +78,13 @@ libiconv_url=https://ftp.gnu.org/pub/gnu/libiconv/libiconv-$libiconv_version.tar
 icmake_url=https://gitlab.com/fbb-git/icmake/-/archive/$icmake_version/icmake-$icmake_version.tar.gz
 yodl_url=https://gitlab.com/fbb-git/yodl/-/archive/$yodl_version/yodl-$yodl_version.tar.gz
 zsh_url=https://github.com/zsh-users/zsh/archive/zsh-5.8.tar.gz
-zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v3.0.1/zsh-5.8-linux-x86_64.tar.gz
+zsh_doc_url=https://github.com/romkatv/zsh-bin/releases/download/v4.0.0/zsh-5.8-linux-x86_64.tar.gz
 
 libiconv_sha256=e6a1b1b589654277ee790cce3734f07876ac4ccfaecbee8afa0b649cf529cc04
 icmake_sha256=7c5c091f58f576da580238c5e3636e2038d9ecf5efb6562ae7e402910d9036e6
 yodl_sha256=0118efd6f05ddeed4910bb5e280a37a4d8e5c2f42fb2009c840b3d5c70f700f8
 zsh_sha256=db6cdfadac8d3d1f85c55c3644620cf5a0f65bf01ca26a58ff06f041bf159a5d
-zsh_doc_sha256=3ed1f41f9746cda82ecf187379cf2faf530ce2e637595698fe2e504589da9667
+zsh_doc_sha256=925ffdcbdca84ae350c3140e39469c6000459d0aa75cd4df17e6ad4dd9324e94
 
 cpus="$(getconf _NPROCESSORS_ONLN)" || cpus="$(sysctl -n hw.ncpu)" || cpus=8
 
@@ -93,7 +93,6 @@ fetch() {
   local sha256="$2"
   local archive="${url##*/}"
   local base="${archive%.tar.gz}"
-  cd -- "$workdir"
   printf '%s  %s\n' "$sha256" "$archive" >"$base".sha256
   if ! cp -- "$outdir/src/$archive" . 2>/dev/null || ! shasum -b -a 256 -c "$base".sha256; then
     rm -f -- "$archive"
@@ -127,9 +126,11 @@ case "$ZSH_BIN_KERNEL" in
       ncurses-static \
       pcre-dev       \
       perl-utils     \
+      rsync          \
       tar            \
       util-linux
 
+      cd -- "$workdir"
       fetch "$libiconv_url" "$libiconv_sha256"
       cd libiconv-"$libiconv_version"
       ./configure                     \
@@ -152,6 +153,7 @@ case "$ZSH_BIN_KERNEL" in
       ncurses      \
       perl5        \
       pcre         \
+      rsync        \
       yodl
   ;;
   darwin)
@@ -164,21 +166,23 @@ case "$ZSH_BIN_KERNEL" in
       exit 1
     fi
     brew install autoconf libiconv ncurses pcre wget
+    mkdir -- "$workdir"/zsh_doc
+    cd -- "$workdir"/zsh_doc
     fetch "$zsh_doc_url" "$zsh_doc_sha256"
-    mv -- "$workdir"/zsh-5.8-linux-x86_64 "$workdir"/zsh_doc
   ;;
   msys*|mingw*)
-    pacman -Sy --noconfirm \
-      autoconf             \
-      binutils             \
-      gcc                  \
-      groff                \
-      libiconv-devel       \
-      make                 \
-      man                  \
-      ncurses-devel        \
-      perl                 \
-      pcre-devel           \
+    pacman -Sy --needed --noconfirm \
+      autoconf                      \
+      binutils                      \
+      gcc                           \
+      groff                         \
+      libiconv-devel                \
+      make                          \
+      man                           \
+      ncurses-devel                 \
+      perl                          \
+      pcre-devel                    \
+      rsync                \
       yodl
   ;;
   cygwin*)
@@ -199,6 +203,7 @@ case "$ZSH_BIN_KERNEL" in
         >&2 echo "  make"
         >&2 echo "  perl"
         >&2 echo "  tar"
+        >&2 echo "  rsync"
         >&2 echo "  util-linux"
         >&2 echo "  wget"
         exit 1
@@ -219,6 +224,7 @@ esac
 
 if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
   if ! command -v icmake >/dev/null 2>&1; then
+    cd -- "$workdir"
     fetch "$icmake_url" "$icmake_sha256"
     cd icmake-"$icmake_version"/icmake
     ./icm_prepare /
@@ -226,6 +232,7 @@ if [ ! -e "$workdir"/zsh_doc ] && ! command -v yodl >/dev/null 2>&1; then
     ./icm_install all
   fi
 
+  cd -- "$workdir"
   fetch "$yodl_url" "$yodl_sha256"
   cd yodl-"$yodl_version"
   mkdir fake-bin
@@ -257,7 +264,6 @@ get_version() {
 	grep '^VERSION=' Config/version.mk | sed 's/VERSION=//'
 }
 version="$(get_version)"
-
 name=zsh-"$version"-"$ZSH_BIN_KERNEL"-"$ZSH_BIN_ARCH"
 
 export CFLAGS="-Wall -Wmissing-prototypes -march=$ZSH_BIN_CPU -DNDEBUG -O2 -flto -fno-strict-aliasing -g -pipe -grecord-gcc-switches -fasynchronous-unwind-tables -s"
@@ -425,29 +431,39 @@ else
   make -j "$cpus" install
 fi
 
-# strip "$workdir/$name"/bin/zsh # unnecessary since we have "-s" in CFLAGS
+rsync -a --copy-links --copy-dirlinks -- "$workdir/$name"/ "$workdir/$name".tmp/
+rm -r -- "$workdir/$name"
+mv -- "$workdir/$name".tmp "$workdir/$name"
+
+cd -- "$workdir/$name"
+
+# strip bin/zsh # unnecessary since we have "-s" in CFLAGS
+rm -- bin/zsh-*
 export version
 echo "built zsh $version"
-rm -- "$workdir/$name"/bin/zsh-*
 
 if [ -d /usr/share/terminfo ]; then
-  cp -r -- /usr/share/terminfo "$workdir/$name"/share/
+	# remove bad symlinks using zsh glob qualifiers.
+	bin/zsh -c "rm -- /usr/share/terminfo/**/*(-@D)"
+  rsync -a --copy-links --copy-dirlinks -- /usr/share/terminfo share/
 else
-  cp -- /usr/local/share/misc/terminfo.db "$workdir/$name"/share/
+  cp -L -- /usr/local/share/misc/terminfo.db share/
 fi
 
 if [ -e "$workdir"/zsh_doc ]; then
-  cp -r -- "$workdir"/zsh_doc/share/man "$workdir/$name"/share/
-  cp -r -- "$workdir/zsh_doc/share/zsh/$version/help" "$workdir/$name/share/zsh/$version/"
+  cp -r -- "$workdir/zsh_doc/share/man" share/
+  cp -r -- "$workdir/zsh_doc/share/zsh/$version/help" "share/zsh/$version/"
 fi
+
+cp -r -- share/man ./
 
 sed_i 's/local HELPDIR=.*/[[ -n "${HELPDIR:-}" ]] || local HELPDIR="$(<<\\'"$magic"'\
 '"$magic"'\
-)"/'                                                 \
-  "$workdir/$name/share/zsh/$version/functions/run-help"  \
-  "$workdir/$name/share/zsh/$version/functions/_run-help"
+)"/'                                \
+  "share/zsh/$version/functions/run-help"  \
+  "share/zsh/$version/functions/_run-help"
 
-cat >"$workdir/$name/share/zsh/$version/scripts/relocate" <<-\END
+cat >"share/zsh/$version/scripts/relocate" <<-\END
 	#!/bin/sh
 
 	set -ue
@@ -642,7 +658,7 @@ cat >"$workdir/$name/share/zsh/$version/scripts/relocate" <<-\END
 	mv -f -- "$runhelpcomp".tmp "$runhelpcomp"
 	END
 
-sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" "$workdir/$name/share/zsh/$version/scripts/relocate"
+sed_i "s/@ZSH_BIN_MAGIC@/$magic/g" "share/zsh/$version/scripts/relocate"
 
 embed_pos() {
   local cmd='
@@ -651,37 +667,24 @@ embed_pos() {
     (( $#parts == 2 ))
     print -r -- $#parts[1]'
   local pos
-  pos="$("$workdir/$name"/bin/zsh -fuec "$cmd" "$workdir/$name"/bin/zsh ":$magic:$1:")"
+  pos="$(bin/zsh -fuec "$cmd" bin/zsh ":$magic:$1:")"
   printf '%s' "$pos" | grep -qxE '[0-9]+'
   local upper
   upper="$(printf '%s' "$1" | tr '[a-z]' '[A-Z]')"
-  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "$workdir/$name/share/zsh/$version/scripts/relocate"
+  sed_i "s/@ZSH_BIN_${upper}_POS@/$pos/g" "share/zsh/$version/scripts/relocate"
 }
 
 embed_pos fpath
 embed_pos script
 embed_pos terminfo
 
-chmod +x "$workdir/$name/share/zsh/$version/scripts/relocate"
+chmod +x share/zsh/"$version"/scripts/relocate
 
-"$workdir/$name/share/zsh/$version/scripts/relocate"
-"$workdir/$name"/bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
-"$workdir/$name/share/zsh/$version/scripts/relocate" -d /usr
+share/zsh/"$version"/scripts/relocate
+bin/zsh -fec 'zmodload zsh/stat; autoload -Uz add-zsh-hook; add-zsh-hook precmd x'
+share/zsh/"$version"/scripts/relocate -d /usr/local
 
-case "$ZSH_BIN_KERNEL" in
-  linux)
-    deref=--hard-dereference
-  ;;
-  freebsd|darwin|msys*|mingw*|cygwin*)
-    deref=
-  ;;
-  *)
-    >&2 echo "[internal error] unhandled kernel: $ZSH_BIN_KERNEL"
-    exit 1
-  ;;
-esac
-
-tar -C "$workdir" $deref -pczf "$outdir"/tmp."$name".tar.gz "$name"
+tar -pczf "$outdir"/tmp."$name".tar.gz *
 mv -f -- "$outdir"/tmp."$name".tar.gz "$outdir"/"$name".tar.gz
 
 cleanup
@@ -696,34 +699,15 @@ cat >&2 <<-END
 	As long as the target machine has a compatible CPU and
 	kernel, it will work.
 
-	To install Zsh from the archive to ~/.zsh-bin, copy it to
-	the home directory on the target machine and run:
+	To install Zsh from the archive, copy it along with
+	'install' script to the home directory on the target
+	machine and run:
 
-	  cd
-	  rm -rf ~/.zsh-bin ~/$name
-	  tar -xzf ~/$name.tar.gz
-	  mv $name ~/.zsh-bin
-	  ~/.zsh-bin/share/zsh/$version/scripts/relocate
-	  rm ~/$name.tar.gz
+	  sh ~/install -f ~/$name.tar.gz
 
-	Now you can invoke ~/.zsh-bin/bin/zsh and it will just work.
-	You will probably want to add ~/.zsh-bin/bin to PATH for
-	convenience.
-
-	If you move or rename ~/.zsh-bin, you will need to call
-	share/zsh/$version/scripts/relocate/relocate afterwards. See the
-	last line in the instructions above.
 	END
 END
 )"
-
-absfile() {
-  [ -e "$1" ]
-  local dir base
-  dir="$(dirname -- "$1")"
-  base="$(basename -- "$1")"
-  ( cd -- "$dir" && dir="$(pwd)" && printf '%s/%s\n' "${dir%/}" "${base}" )
-}
 
 image=
 docker=
@@ -819,9 +803,10 @@ if [ -z "$ZSH_BIN_CPU" ]; then
 		ZSH_BIN_CPU="$(_get_arch)"
 	else
 		case "$ZSH_BIN_ARCH" in
-			armv7l)         ZSH_BIN_CPU=armv7;;
-			aarch64)        ZSH_BIN_CPU=armv8-a;;
-			x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
+    armv6l)         ZSH_BIN_CPU=armv6;;
+    armv7l)         ZSH_BIN_CPU=armv7;;
+    aarch64)        ZSH_BIN_CPU=armv8-a;;
+    x86_64|amd64)   ZSH_BIN_CPU=x86-64;;
 			i386|i586|i686) ZSH_BIN_CPU="$ZSH_BIN_ARCH";;
 			*)
 				>&2 echo '[error] unable to infer target CPU architecture'
@@ -845,6 +830,7 @@ case "$ZSH_BIN_KERNEL" in
       case "$ZSH_BIN_ARCH" in
         x86_64)         image=alpine:3.11.5;;
         i386|i586|i686) image=i386/alpine:3.11.5;;
+        armv6l)         image=arm32v6/alpine:3.11.5;;
         armv7l)         image=arm32v7/alpine:3.11.5;;
         aarch64)        image=arm64v8/alpine:3.11.5;;
         *)
@@ -918,12 +904,13 @@ esac
 
 case "$ZSH_BIN_KERNEL" in
   linux)
+		dir="$(pwd)"
     "$docker" run                             \
       -e ZSH_BIN_KERNEL="$ZSH_BIN_KERNEL"     \
       -e ZSH_BIN_ARCH="$ZSH_BIN_ARCH"         \
       -e ZSH_BIN_CPU="$ZSH_BIN_CPU"           \
 			-e ZSH_GIT_CHECKOUT="$ZSH_GIT_CHECKOUT" \
-      -v "$PWD":/out:Z                        \
+      -v "$dir":/out:Z                        \
       -w /out                                 \
       --rm                                    \
       -- "$image" /bin/sh -uexc "$build"

@@ -15,6 +15,14 @@ I'll upstream some of these once I'm confident that this works well.
 
 > Statically-linked, hermetic, relocatable Zsh.
 
+- The latest version of Zsh.
+- Works virtually everywhere.
+- Takes seconds to install.
+- Doesn't require root access.
+- Does not have prerequisites.
+
+## Table of Contents
+
 - [Installation](#installation)
 - [Compiling](#compiling)
 - [How it works](#how-it-works)
@@ -37,32 +45,29 @@ Or, if you don't have `curl`:
 sh -c "$(wget -O- https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
 ```
 
-Or, if you prefer, follow [manual installation](#manual-installation) instructions.
+Here's what it looks like:
 
-Add `~/.zsh-bin/bin` to `PATH` and type `zsh` to start Zsh.
+```text
+$ sh -c "$(curl -fsSL https://raw.githubusercontent.com/romkatv/zsh-bin/master/install)"
+Choose installation directory for Zsh 5.8:
 
-*Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
+  (1) /usr/local
+  (2) /home/romka/.local
+  (3) Custom directory (input required)
 
-### Manual installation
+Choice: 1
 
-```sh
-kernel=$(uname -s | tr '[A-Z]' '[a-z]')
-arch=$(uname -m | tr '[A-Z]' '[a-z]')
-name="zsh-5.8-${kernel}-${arch}"
-curl -fsSLO -- "https://github.com/romkatv/zsh-bin/releases/download/v3.0.1/${name}.tar.gz"
-tar -xzf "$name".tar.gz
-rm "$name".tar.gz
-rm -rf ~/.zsh-bin
-mv "$name" ~/.zsh-bin
-~/.zsh-bin/share/zsh/5.8/scripts/relocate
+Zsh 5.8 successfully installed to /usr/local
+
+To start Zsh, type:
+
+  zsh
 ```
 
-The [install script](https://github.com/romkatv/zsh-bin/blob/master/install) has more robust logic
-for determining which archive to download. See its source code if the simple algorithm listed
-above gives you HTTP 404.
+*Tip*: choose to install to `/usr/local` if you have root access on the machine and to `~/.local`
+if you don't.
 
-If you move or rename `~/.zsh-bin`, you'll need to call `share/zsh/5.8/scripts/relocate/relocate`
-afterwards. See the last line in the instructions above.
+*Tip*: `install` has a few optional flags. Invoke it with `-h` to list them.
 
 ## Compiling
 
@@ -192,14 +197,14 @@ necessary build tools, you can compile Zsh there and copy build artifacts to the
 machine. If you place all files in the same location and set a few custom environment variables, it
 should work.
 
-Or you can download a 3MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
+Or you can download a 4MB archive from zsh-bin, extract it, and enjoy Zsh 5.8.
 
 ## No, seriously, why?
 
 I `ssh` to servers through a Bash wrapper script that automatically copies my admin tools and shell
-configs from the local machine to remote. Here's the gist of it:
+configs from local host to remote. Here's the gist of it:
 
-```zsh
+```bash
 #!/usr/bin/env bash
 #
 # Usage: ssh.bash [ssh-options] [user@]hostname
@@ -220,16 +225,15 @@ In March of 2020 an [announcement](
   https://www.reddit.com/r/zsh/comments/fiq9w2/bring_zsh_with_ohmyzsh_wherever_you_go_through/) was
 posted on [/r/zsh](https://www.reddit.com/r/zsh/). It mentioned that "xxh uses the portable
 version of Zsh". I thought it would be cool to migrate my `ssh.bash` script to Zsh and install
-the portable version of Zsh on the remote machine if there isn't one already installed (this is
+the portable version of Zsh on the remote host if there isn't one already installed (this is
 basically what [xxh](https://github.com/xxh/xxh) does).
 
 This worked in some cases but not always as the version of Zsh from xxh turned out not portable
 enough for my needs. I set out to build a more portable alternative and created zsh-bin. Since it
 works for me, I figured it might be of use to others.
 
-My public standalone `ssh.zsh` script is [here](
-  https://github.com/romkatv/dotfiles-public/blob/master/bin/ssh.zsh). See comments at the top if
-you are curious.
+Users of [zsh4humans](https://github.com/romkatv/zsh4humans) can run `z4h ssh` instead of plain
+`ssh` to fire up Zsh on the remote host with local Zsh configs.
 
 ## Limitations
 
@@ -287,3 +291,32 @@ there is no `yodl` for macOS and porting it is a daunting task. To get out of th
 pulls man pages and help files from `zsh-5.8-linux-x86_64.tar.gz` and embeds them in
 `zsh-5.8-darwin-x86_64.tar.gz`. So if you are trying to reproduce the macOS build, you'll need to
 start by building Zsh for Linux-x86_64.
+
+---
+
+If installation instructions are not followed, certain things won't work.
+
+For example, if instead of running `install` you simply download and extract
+`zsh-5.8-linux-x86_64.tar.gz`, you'll get errors when trying to use builtin autoloadable functions:
+
+```text
+add-zsh-hook: function definition file not found
+is-at-least: function definition file not found
+compinit: function definition file not found
+```
+
+If you don't add `bin` subdirectory of the installation directory to `PATH`, `zsh` command may fail:
+
+```zsh
+zsh: command not found
+```
+
+If you work around this problem by adding a symbolic link to `zsh` to a directory in your `PATH`,
+`man zsh` may still fail:
+
+```text
+No manual entry for zsh
+```
+
+The easiest solution for problems of this kind is to follow installation instructions. If you cannot
+or don't want to, improvise.
